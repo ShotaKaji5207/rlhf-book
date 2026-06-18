@@ -137,3 +137,22 @@ The Citation block (which has a different heading level across pages — h3 on i
 2. **Add diagrams to chapter text** - Insert figure references in `book/chapters/07-reward-models.md`
 3. **Add RLHF overview diagram** - Add the same RLHF diagram to the start of the RM chapter to highlight where RMs fit in the pipeline
 4. **Review PR** - Check over the full PR before merge
+
+## Cursor Cloud specific instructions
+
+These notes are for cloud agents working in this repo after the startup update script (`uv sync` for the root project and `code/`) has already run. System tools (`pandoc` 3.7.0.2, `pandoc-crossref` v0.3.20, `build-essential`, `python3-dev`, `uv`) are baked into the VM snapshot, so do not reinstall them.
+
+### Two independent products / `uv` projects
+- **Book website** (root, the flagship): Pandoc + Make + `uv`. Build/run commands are in `book/README.md` and the `Makefile`.
+- **`code/` ML library**: separate `uv` project (`code/pyproject.toml`, Python 3.12). Lint/test commands are documented in `code/CLAUDE.md` and enforced by `.github/workflows/lint.yml`.
+
+### Running the website locally (non-obvious caveats)
+- Build then serve: `make html && make files`, then `make serve` (serves `build/html` at `http://localhost:8000` with clean-URL routing via `book/scripts/serve.py`; override with `make serve PORT=9000`). `make serve` is a long-running foreground process — start it in a background tmux session.
+- `pandoc-crossref` must match the `pandoc` version's `pandoc-types` API or the `--filter pandoc-crossref` step fails; the snapshot pins the compatible pair (pandoc 3.7.0.2 + pandoc-crossref v0.3.20).
+- `make files` prints `Failed to copy ...` lines for `build/pdf/book.pdf`, `book.epub`, and `book.kindle.epub` when only the HTML site was built — these are harmless (the recipe has `|| echo` fallbacks); the PDF/EPUB/Kindle targets need a LaTeX toolchain that is not installed.
+- Full-text search needs the Pagefind index (`make pagefind`, requires node/`npx`); without it the site loads fine but in-site search returns nothing.
+
+### `code/` library notes
+- Tests are lightweight smoke tests (imports + CLI wiring, no GPU/downloads): `uv run --extra dev pytest` from `code/`.
+- Lint must use the CI-pinned ruff version: `uvx ruff@0.14.5 check .` and `uvx ruff@0.14.5 format --check .`. Unpinned `uvx ruff` can diverge from CI.
+- Actual training scripts require a GPU and are not runnable here; only `uv sync`, lint, and smoke tests validate the environment.
